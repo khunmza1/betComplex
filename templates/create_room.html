@@ -8,11 +8,31 @@
         <label for="room_name">Room Name</label>
         <input type="text" id="room_name" name="room_name" required>
         <label for="game">Game</label>
-        <select id="game" name="game">
+        <select id="game" name="game" onchange="togglePokerOptions()">
             <option value="poker">Poker</option>
             <option value="blackjack">Blackjack</option>
         </select>
+        <div id="poker_options">
+            <label for="default_buyin">Default Buy-in</label>
+            <input type="number" id="default_buyin" name="default_buyin" value="400">
+            <label for="chip_ratio">Chip to Baht Ratio</label>
+            <input type="number" id="chip_ratio" name="chip_ratio" value="0.5" step="0.01">
+        </div>
         <button type="submit">Create</button>
     </form>
+
+    <script>
+        function togglePokerOptions() {
+            var game = document.getElementById('game');
+            var pokerOptions = document.getElementById('poker_options');
+            if (game.value === 'poker') {
+                pokerOptions.style.display = 'block';
+            } else {
+                pokerOptions.style.display = 'none';
+            }
+        }
+        // Run on page load
+        togglePokerOptions();
+    </script>
     <a href="{{ url_for('lobby') }}">Back to Lobby</a>
 {% endblock %}

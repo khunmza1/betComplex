@@ -9,14 +9,239 @@
     </div>
     <h2>Game: {{ room.game }}</h2>
 
+    {% if room.game == 'poker' and show_buy_in_modal %}
+    <div class="modal">
+        <div class="modal-content">
+            <h2>Buy-in for {{ room.name }}</h2>
+            <form method="POST" action="{{ url_for('buy_in', room_id=room.id) }}">
+                <label for="buy_in_amount">Buy-in Amount</label>
+                <input type="number" id="buy_in_amount" name="buy_in_amount" value="{{ room.default_buyin }}" required>
+                <button type="submit">Buy-in</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if room.game == 'poker' %}
+        <h3>Circulating Chips: {{ room.circulating_chips }}</h3>
+    {% endif %}
+
     <h3>Players</h3>
     <ul>
         {% for player in room.players %}
-            <li>{{ player.username }}</li>
+            <li>
+                {{ player.username }}
+                {% if room.game == 'poker' and player.id in player_states_map %}
+                    - Chips: {{ player_states_map[player.id].chips }}
+                {% endif %}
+                {% if room.game == 'blackjack' and player.id in player_states_map %}
+                    - Bet: {{ player_states_map[player.id].bet_amount }}
+                    {% if player.id == current_user.id %}
+                        <button onclick="open_bet_modal({{ player.id }})">Change Bet</button>
+                    {% endif %}
+
+                    {% if player.id in hands %}
+                        <ul>
+                        {% for hand in hands[player.id] %}
+                            <li>Hand {{ hand.hand_number }}: {{ hand.result or 'In Progress' }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No hands played yet.</p>
+                    {% endif %}
+
+                    <div id="bet-modal-{{ player.id }}" class="modal" style="display:none;">
+                        <div class="modal-content">
+                            <span class="close" onclick="close_bet_modal({{ player.id }})">&times;</span>
+                            <h2>Change Bet for {{ player.username }}</h2>
+                            <form method="POST" action="{{ url_for('update_bet', room_id=room.id) }}">
+                                <label for="new_bet_amount">New Bet Amount:</label>
+                                <input type="number" name="new_bet_amount" value="{{ player_states_map[player.id].bet_amount }}" required>
+                                <button type="submit">Update Bet</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            </li>
         {% else %}
             <li>No players have joined yet.</li>
         {% endfor %}
     </ul>
 
+    {% if room.game == 'poker' %}
+        {% if current_user.id == room.created_by %}
+            <form method="POST" action="{{ url_for('end_game', room_id=room.id) }}">
+                <button type="submit">End Game</button>
+            </form>
+        {% endif %}
+        <button type="button" onclick="open_chip_modal()">Rebuy / Transfer</button>
+    {% endif %}
+
+    {% if room.game == 'blackjack' %}
+        <hr>
+        {% if current_user.id == room.dealer_id %}
+            <h3>Dealer Control Panel</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Bet</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in room.players %}
+                        {% if player.id != room.dealer_id %}
+                            <tr>
+                                <td>{{ player.username }}</td>
+                                <td>{{ player_states_map[player.id].bet_amount }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('log_hand_result', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <input type="hidden" name="result" value="win">
+                                        <button type="submit">Win</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('log_hand_result', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <input type="hidden" name="result" value="lose">
+                                        <button type="submit">Lose</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('log_hand_result', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <input type="hidden" name="result" value="push">
+                                        <button type="submit">Push</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('log_hand_result', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <input type="hidden" name="result" value="blackjack">
+                                        <button type="submit">Blackjack</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('log_hand_result', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <input type="hidden" name="result" value="double">
+                                        <button type="submit">Double</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('split_hand', room_id=room.id, player_id=player.id) }}" style="display: inline;">
+                                        <button type="submit">Split</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+        <h3>Dealer Selection</h3>
+        {% if room.dealer_id %}
+            <p>Current Dealer: {{ room.players|selectattr('id', 'equalto', room.dealer_id)|first.username }}</p>
+        {% else %}
+            <p>No dealer selected.</p>
+        {% endif %}
+
+        {% if current_user.id == room.created_by %}
+            <form method="POST" action="{{ url_for('set_dealer', room_id=room.id) }}">
+                <label for="dealer_id">Select Dealer:</label>
+                <select name="dealer_id" required>
+                    {% for player in room.players %}
+                        <option value="{{ player.id }}">{{ player.username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Set Dealer</button>
+            </form>
+        {% endif %}
+    {% endif %}
+
     <a href="{{ url_for('lobby') }}">Back to Lobby</a>
+
+    {% if room.game == 'poker' and room.game_phase == 'counting' %}
+        <hr>
+        <h2>Chip Counting</h2>
+        {% if not all_results_in %}
+            <p>Enter your final chip count. The game will end when all players have submitted their counts.</p>
+            <form method="POST" action="{{ url_for('submit_chip_count', room_id=room.id) }}">
+                <label for="final_chip_count">Your Final Chip Count:</label>
+                <input type="number" name="final_chip_count" required>
+                <button type="submit">Submit</button>
+            </form>
+            <p>Players who have submitted: {{ results|length }} / {{ room.players|length }}</p>
+        {% else %}
+            <h3>Final Results</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Buy-in</th>
+                        <th>Final Chips</th>
+                        <th>Profit/Loss (Chips)</th>
+                        <th>Profit/Loss (Baht)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                        {% set player_state = player_states_map[result.user_id] %}
+                        {% set profit_loss = result.final_chip_count - player_state.buy_in_amount %}
+                        <tr>
+                            <td>{{ room.players|selectattr('id', 'equalto', result.user_id)|first.username }}</td>
+                            <td>{{ player_state.buy_in_amount }}</td>
+                            <td>{{ result.final_chip_count }}</td>
+                            <td>{{ profit_loss }}</td>
+                            <td>{{ profit_loss * room.chip_ratio }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endif %}
+
+    <div id="bet-modal-{{ player.id }}" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="close_bet_modal({{ player.id }})">&times;</span>
+            <h2>Change Bet for {{ player.username }}</h2>
+            <form method="POST" action="{{ url_for('update_bet', room_id=room.id) }}">
+                <label for="new_bet_amount">New Bet Amount:</label>
+                <input type="number" name="new_bet_amount" value="{{ player_states_map[player.id].bet_amount }}" required>
+                <button type="submit">Update Bet</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="chip-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="close_chip_modal()">&times;</span>
+            <h2>Rebuy or Transfer Chips</h2>
+
+            <div id="rebuy-form">
+                <h3>Rebuy</h3>
+                <form method="POST" action="{{ url_for('rebuy', room_id=room.id) }}">
+                    <label for="rebuy_amount">Amount:</label>
+                    <input type="number" name="rebuy_amount" value="{{ room.default_buyin }}" required>
+                    <button type="submit">Rebuy</button>
+                </form>
+            </div>
+
+            <hr>
+
+            <div id="transfer-form">
+                <h3>Transfer to another player</h3>
+                <form method="POST" action="{{ url_for('transfer_chips', room_id=room.id) }}">
+                    <label for="transfer_amount">Amount:</label>
+                    <input type="number" name="transfer_amount" required>
+                    <label for="to_player_id">To Player:</label>
+                    <select name="to_player_id" required>
+                        {% for player in room.players %}
+                            {% if player.id != current_user.id %}
+                                <option value="{{ player.id }}">{{ player.username }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Transfer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function open_chip_modal() {
+            document.getElementById('chip-modal').style.display = 'block';
+        }
+        function close_chip_modal() {
+            document.getElementById('chip-modal').style.display = 'none';
+        }
+    </script>
 {% endblock %}
