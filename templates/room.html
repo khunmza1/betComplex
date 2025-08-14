@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Room: {{ room.name }}{% endblock %}
+
+{% block content %}
+    <div class="room-header">
+        <h1>{{ room.name }}</h1>
+        <a href="/logout">Logout</a>
+    </div>
+    <h2>Game: {{ room.game }}</h2>
+
+    <h3>Players</h3>
+    <ul>
+        {% for player in room.players %}
+            <li>{{ player.username }}</li>
+        {% else %}
+            <li>No players have joined yet.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('lobby') }}">Back to Lobby</a>
+{% endblock %}

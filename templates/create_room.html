@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Room{% endblock %}
+
+{% block content %}
+    <h1>Create Room</h1>
+    <form method="POST" action="/create_room">
+        <label for="room_name">Room Name</label>
+        <input type="text" id="room_name" name="room_name" required>
+        <label for="game">Game</label>
+        <select id="game" name="game">
+            <option value="poker">Poker</option>
+            <option value="blackjack">Blackjack</option>
+        </select>
+        <button type="submit">Create</button>
+    </form>
+    <a href="{{ url_for('lobby') }}">Back to Lobby</a>
+{% endblock %}
