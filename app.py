@@ -159,6 +159,12 @@ def join_room(room_id):
     room = Room.query.get_or_404(room_id)
     if current_user not in room.players:
         room.players.append(current_user)
+        # For blackjack, create a default player state immediately
+        if room.game == 'blackjack':
+            player_state = PlayerState.query.filter_by(user_id=current_user.id, room_id=room.id).first()
+            if not player_state:
+                new_player_state = PlayerState(user_id=current_user.id, room_id=room.id)
+                db.session.add(new_player_state)
         db.session.commit()
     return redirect(url_for('room', room_id=room.id))
 
