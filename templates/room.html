@@ -128,7 +128,7 @@
         {% endif %}
         <h3>Dealer Selection</h3>
         {% if room.dealer_id %}
-            <p>Current Dealer: {{ room.players|selectattr('id', 'equalto', room.dealer_id)|first.username }}</p>
+            <p>Current Dealer: {{ (room.players|selectattr('id', 'equalto', room.dealer_id)|first).username }}</p>
         {% else %}
             <p>No dealer selected.</p>
         {% endif %}
@@ -176,7 +176,7 @@
                         {% set player_state = player_states_map[result.user_id] %}
                         {% set profit_loss = result.final_chip_count - player_state.buy_in_amount %}
                         <tr>
-                            <td>{{ room.players|selectattr('id', 'equalto', result.user_id)|first.username }}</td>
+                            <td>{{ (room.players|selectattr('id', 'equalto', result.user_id)|first).username }}</td>
                             <td>{{ player_state.buy_in_amount }}</td>
                             <td>{{ result.final_chip_count }}</td>
                             <td>{{ profit_loss }}</td>
