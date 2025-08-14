@@ -188,19 +188,6 @@
         {% endif %}
     {% endif %}
 
-    <div id="bet-modal-{{ player.id }}" class="modal" style="display:none;">
-        <div class="modal-content">
-            <span class="close" onclick="close_bet_modal({{ player.id }})">&times;</span>
-            <h2>Change Bet for {{ player.username }}</h2>
-            <form method="POST" action="{{ url_for('update_bet', room_id=room.id) }}">
-                <label for="new_bet_amount">New Bet Amount:</label>
-                <input type="number" name="new_bet_amount" value="{{ player_states_map[player.id].bet_amount }}" required>
-                <button type="submit">Update Bet</button>
-            </form>
-        </div>
-    </div>
-    {% endif %}
-
     <div id="chip-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close" onclick="close_chip_modal()">&times;</span>
